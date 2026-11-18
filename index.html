@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#FFF7EF">
 <meta name="description" content="딸아이의 도서관 대출 내역, 읽은 책 기록, 읽고 싶은 책과 대출 가능한 도서관을 한 곳에서 관리하는 독서 기록장">
+<meta name="robots" content="noindex, nofollow">
 <title>우리 딸 독서 기록장</title>
 <style>
   :root{
@@ -145,6 +146,8 @@
   .btn-danger{background:#fff;color:var(--coral-deep);border-color:#F3C8BD}
   .btn-sm{padding:8px 12px;font-size:13px;border-radius:11px}
   .btn-wide{width:100%}
+  .btn[disabled]{opacity:.5;cursor:not-allowed;box-shadow:none}
+  .btn[disabled]:active{transform:none}
   .btn .ico{font-size:14px}
 
   /* ---------- 카드 공통 ---------- */
@@ -1130,6 +1133,11 @@
     }
   }
 
+  /* 도서관 화면에 '연장 불가'로 적힌 책(예: 예약중 · 연장 불가)은 연장 버튼을 막아요 */
+  function cannotExtendLoan(loan) {
+    return /연장\s*불가|연장불가/.test(String((loan && loan.memo) || ''));
+  }
+
   function loanCardHtml(loan) {
     var info = ddayInfo(loan.dueDate);
     var cls = 'card loan-card';
@@ -1154,7 +1162,11 @@
     if (loan.memo) { html += '<p class="comment" style="margin-top:10px">' + esc(loan.memo) + '</p>'; }
     html += '<div class="card-actions">';
     html += '<button class="btn btn-primary btn-sm" type="button" data-act="loan-return" data-id="' + esc(loan.id) + '">반납 · 다 읽었어요</button>';
-    html += '<button class="btn btn-ghost btn-sm" type="button" data-act="loan-extend" data-id="' + esc(loan.id) + '">+7일 연장</button>';
+    if (cannotExtendLoan(loan)) {
+      html += '<button class="btn btn-ghost btn-sm" type="button" disabled aria-label="예약중이라 7일 연장을 할 수 없어요" title="예약중이라 7일 연장을 할 수 없어요">연장 불가</button>';
+    } else {
+      html += '<button class="btn btn-ghost btn-sm" type="button" data-act="loan-extend" data-id="' + esc(loan.id) + '">+7일 연장</button>';
+    }
     html += '<span class="spacer"></span>';
     html += '<button class="icon-btn sm" type="button" data-act="loan-edit" data-id="' + esc(loan.id) + '" aria-label="대출 정보 수정">✎</button>';
     html += '<button class="icon-btn sm" type="button" data-act="loan-delete" data-id="' + esc(loan.id) + '" aria-label="대출 기록 삭제">🗑</button>';
@@ -1330,6 +1342,7 @@
     html += '</div>';
 
     html += '<div class="wish-foot">';
+    html += '<button class="btn btn-primary btn-sm" type="button" data-act="wish-read" data-id="' + esc(wish.id) + '">다 읽었어요</button>';
     html += '<button class="btn btn-sage btn-sm" type="button" data-act="wish-to-loan" data-id="' + esc(wish.id) + '">바로 대출 등록</button>';
     html += '<button class="btn btn-ghost btn-sm" type="button" data-act="wish-copy" data-title="' + esc(wish.title) + '">제목 복사</button>';
     html += '</div>';
@@ -1596,6 +1609,9 @@
 
     var body = '';
     body += '<form id="readForm" novalidate>';
+    if (!isEdit && prefill && prefill.wishId) {
+      body += '<p class="sheet-note" style="margin:0 0 12px">저장하면 <b>읽고 싶은 책</b>에서 빠지고 <b>읽은 목록</b>에 담겨요.</p>';
+    }
     body += fieldHtml('readTitle', '책 제목', '<input type="text" id="readTitle" value="' + esc(data.title) + '" placeholder="예: 5번 레인" autocomplete="off">');
     body += fieldHtml('readAuthor', '지은이 <span class="sub">(선택)</span>', '<input type="text" id="readAuthor" value="' + esc(data.author) + '" placeholder="예: 은소홀" autocomplete="off">');
     body += '<div class="row-2">';
@@ -1961,6 +1977,10 @@
   function extendLoan(id) {
     var loan = byId(state.loans, id);
     if (!loan) { return; }
+    if (cannotExtendLoan(loan)) {
+      toast('《' + loan.title + '》은(는) 예약중이라 연장할 수 없어요');
+      return;
+    }
     if (!isDateStr(loan.dueDate)) {
       loan.dueDate = addDays(loan.loanDate || todayISO(), 14);
     } else {
@@ -2010,6 +2030,22 @@
     } else {
       fallback();
     }
+  }
+
+  /* 읽고 싶은 책 → 다 읽었어요 : 출처·별점·한줄평을 받아 읽은 목록으로 옮겨요 */
+  function startWishRead(id) {
+    var wish = byId(state.wishes, id);
+    if (!wish) { return; }
+    var libName = '';
+    for (var i = 0; i < LIBS.length; i++) {
+      if (wish.statuses && wish.statuses[LIBS[i].id] === '대출가능') { libName = LIBS[i].name; break; }
+    }
+    openReadForm(null, {
+      title: wish.title,
+      author: wish.author,
+      library: libName || LIBS[0].name,
+      wishId: wish.id
+    });
   }
 
   function startReturn(id) {
@@ -2151,6 +2187,9 @@
         break;
       case 'wish-cycle':
         cycleWishStatus(id, node.getAttribute('data-lib'));
+        break;
+      case 'wish-read':
+        startWishRead(id);
         break;
       case 'wish-to-loan':
         var wishForLoan = byId(state.wishes, id);
