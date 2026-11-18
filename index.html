@@ -500,7 +500,7 @@
      ========================================================= */
   var STORAGE_KEY = 'dd_booklog_v1';
   var DATA_VERSION = 3;
-  var SEED_VERSION = 3;   /* 저장소에 반영한 시드 버전 (2 = 대출 이력 36권, 3 = 대출 중 8권) */
+  var SEED_VERSION = 4;   /* 저장소에 반영한 시드 버전 (2 = 대출 이력 36권, 3 = 대출 중 8권, 4 = 취향 추천 30권) */
   var STATUSES = ['미확인', '대출가능', '대출중', '미소장'];
   var STATUS_CLASS = { '미확인': 'unknown', '대출가능': 'ok', '대출중': 'busy', '미소장': 'none' };
   var OTHER_LIB = '기타 도서관';
@@ -514,11 +514,11 @@
     '?searchType=SIMPLE&searchCategory=ALL&searchKey=ALL&searchKeyword=';
   var SONGPA_HOME = 'https://www.splib.or.kr/spclib/index.do';
 
-  /* 첫 실행 때만 들어가는 추천 도서 18권 (11-13 베스트셀러 / 11-16 수상작)
-     《5번 레인》은 2026-09-22 반납한 대출 이력에 있어 읽은 목록으로 옮겼어요.
-     《어린이 보물섬 1: 사회·지리편》은 2026-11-04 빌려서 대출 내역에 있어 추천 목록에서 뺐어요. */
+  /* 첫 실행 추천 도서 17권 (11-13 베스트셀러 / 11-16 수상작)
+     Emma님이 11-18 웹페이지에서 직접 정리한 백업(loans 6 · reads 30 · wishes 17)을 그대로 기본값으로 삼았어요.
+     원래 18권 중 《긴긴밤》은 직접 사서 읽은 책(읽은 목록)으로 옮겨져 빠졌어요.
+     여기에 11-18 별점 5점 취향으로 고른 30권(SEED_WISHES_V4)을 더해 모두 47권이에요. */
   var SEED_WISHES = [
-    { title: '긴긴밤', author: '루리', tag: '베스트셀러' },
     { title: '푸른 사자 와니니 10', author: '이현', tag: '베스트셀러' },
     { title: '고양이 해결사 깜냥 9', author: '홍민정', tag: '베스트셀러' },
     { title: '똥볶이 할멈 9', author: '강효미', tag: '베스트셀러' },
@@ -538,58 +538,92 @@
     { title: '구덩이', author: '루이스 새커', tag: '수상작' }
   ];
 
-  /* 송파어린이도서관 · 송파구 책솔이 대출 이력 (2026-07-31 ~ 2026-11-13, 36권 · 모두 반납 완료)
-     key 는 등록번호 기준 고유키라서 여러 번 병합해도 중복되지 않아요.
-     finishedDate = 반납일(= 다 읽은 날), loanDate = 대출일 */
-  var SEED_READS = [
-    { key: 'loan36:BM0000034887', title: '(수~상한) 호랑이 빵집. 1, 신단 쑥 위조 사건', author: '서지원 글, 홍그림 그림', finishedDate: '2026-11-13', loanDate: '2026-11-10', library: '가락몰도서관 (책솔이)' },
-    { key: 'loan36:EM0000126611', title: '이상한 무인 라면가게', author: '서아람 글, 안병현 그림', finishedDate: '2026-11-10', loanDate: '2026-11-04', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000133682', title: '폭염 대피소', author: '박지숙, 김새벽, 김민정 지음', finishedDate: '2026-11-13', loanDate: '2026-11-04', library: '송파어린이도서관' },
-    { key: 'loan36:LC0000002506', title: '(읽으면서 바로 써먹는)어린이 고사성어', author: '한날 글·그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', library: '풍납도서관 (책솔이)' },
-    { key: 'loan36:EM0000115055', title: '비밀의 신 한피라리. 1, 요괴투성이 여름 방학', author: '히로시마 레이코 지음, 구뵤 아자미 그림, 고향옥 옮김', finishedDate: '2026-11-04', loanDate: '2026-10-23', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000133360', title: '고민이 사르르 죽', author: '김하영 글, 임수현 그림', finishedDate: '2026-11-13', loanDate: '2026-10-23', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000133525', title: '잡아라! 짜증도치', author: '함지슬 글, 임미란 그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000133532', title: '참견백단 야옹이의 슬기로운 걱정 사전', author: '김선희 지음, 강혜숙 그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', library: '송파어린이도서관' },
-    { key: 'loan36:SC0000010977', title: '(읽으면서 바로 써먹는)어린이 퀴즈', author: '한날 글·그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', library: '돌마리도서관 (책솔이)' },
-    { key: 'loan36:SM0000033443', title: '(읽으면서 바로 써먹는)어린이 스도쿠 : 학교 괴담', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-13', library: '소나무3호 (책솔이)' },
-    { key: 'loan36:CM0000037680', title: '(읽으면서 바로 써먹는)어린이 한국사 퀴즈. 2', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-13', library: '거마도서관 (책솔이)' },
-    { key: 'loan36:SM0000030563', title: '(읽으면서 바로 써먹는)어린이 맞춤법 행성', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-13', library: '소나무3호 (책솔이)' },
-    { key: 'loan36:EM0000126050', title: '(읽으면서 바로 써먹는)어린이 OX 퀴즈', author: '한날 지음', finishedDate: '2026-11-04', loanDate: '2026-10-21', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000128043', title: '할머니는 도둑', author: '데이비드 윌리엄스 글, 토니 로스 그림, 장선하 옮김', finishedDate: '2026-10-21', loanDate: '2026-10-07', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000131451', title: '여기는 요괴 병원. 1, 요괴도 감기에 걸려요!', author: '도미야스 요코 글, 고마쓰 요시카 그림, 송지현 옮김', finishedDate: '2026-10-13', loanDate: '2026-10-07', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000127298', title: '최재천의 동물대탐험 : 호주의 특별한 동물들. 8, 코알라 구출 작전', author: '황혜영 글, 박현미 그림', finishedDate: '2026-10-13', loanDate: '2026-10-07', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000119426', title: '(읽으면서 바로 써먹는)어린이 세계사 퀴즈. 2', author: '한날 지음', finishedDate: '2026-10-21', loanDate: '2026-10-07', library: '송파어린이도서관' },
-    { key: 'loan36:KM0000045274', title: '(읽으면서 바로 써먹는)어린이 세계 여행', author: '한날 글·그림', finishedDate: '2026-10-07', loanDate: '2026-09-30', library: '송파글마루도서관 (책솔이)' },
-    { key: 'loan36:CM0000038794', title: '(읽으면서 바로 써먹는)어린이 세계사 퀴즈. 1', author: '한날 글·그림', finishedDate: '2026-10-07', loanDate: '2026-09-30', library: '거마도서관 (책솔이)' },
-    { key: 'loan36:CM0000040560', title: '(읽으면서 바로 써먹는)어린이 감정 표현', author: '한날 글·그림', finishedDate: '2026-10-07', loanDate: '2026-09-30', library: '거마도서관 (책솔이)' },
-    { key: 'loan36:EM0000130049', title: '비밀의 신 한피라리. 7, 복고양이의 선물', author: '히로시마 레이코 글, 구뵤 아자미 그림, 송지현 옮김', finishedDate: '2026-10-21', loanDate: '2026-09-30', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000130048', title: '비밀의 신 한피라리. 6, 요괴들의 운동회', author: '히로시마 레이코 글, 구뵤 아자미 그림, 황세정 옮김', finishedDate: '2026-10-21', loanDate: '2026-09-30', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000131472', title: '(읽으면서 바로 써먹는)어린이 낱말 퍼즐', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-07', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000127967', title: '(읽으면서 바로 써먹는)어린이 초등 교과 어휘', author: '한날 글·그림', finishedDate: '2026-09-30', loanDate: '2026-09-22', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000127966', title: '(읽으면서 바로 써먹는)어린이 속담 따라쓰기, 바이러스편', author: '한날 글·그림', finishedDate: '2026-09-30', loanDate: '2026-09-22', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000132338', title: '소원을 들어주는 미호네. 8', author: '이나영 글, 윤성 그림', finishedDate: '2026-09-22', loanDate: '2026-09-08', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000132343', title: '소원을 들어주는 미호네. 3', author: '이나영 글, 정수영 그림', finishedDate: '2026-09-22', loanDate: '2026-09-08', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000120043', title: '이상한 과자 가게 전천당. 19', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-21', loanDate: '2026-08-13', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000129849', title: '요괴의 아이를 돌봐드립니다. 1', author: '히로시마 레이코 글, 미노루 그림, 김지영 옮김', finishedDate: '2026-08-21', loanDate: '2026-08-13', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000122255', title: '이상한 과자 가게 전천당. 20', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-21', loanDate: '2026-08-13', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000101930', title: '슈퍼 거북', author: '유설화 글·그림', finishedDate: '2026-08-13', loanDate: '2026-07-31', library: '송파어린이도서관' },
-    { key: 'loan36:PM0000017134', title: '홍길동전, 세상을 뒤집다', author: '이영민 글, 김순영 그림', finishedDate: '2026-08-21', loanDate: '2026-07-31', library: '소나무2호 (책솔이)' },
-    { key: 'loan36:EM0000131471', title: '이상한 과자 가게 전천당 : 행운의 갈림길. 4', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-13', loanDate: '2026-07-31', library: '송파어린이도서관' },
-    { key: 'loan36:EM0000128080', title: '이상한 과자 가게 전천당. 13', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-13', loanDate: '2026-07-31', library: '송파어린이도서관' },
-    { key: 'loan36:KM0000036055', title: '슬픈 노벨상', author: '정화진 글, 박지윤 그림', finishedDate: '2026-08-21', loanDate: '2026-07-31', library: '송파글마루도서관 (책솔이)' },
-    { key: 'loan36:EM0000107066', title: '5번 레인', author: '은소홀 글, 노인경 그림', finishedDate: '2026-09-22', loanDate: '2026-09-08', library: '송파어린이도서관' },
+  /* 2026-11-18 별점 5점을 준 책 7권(《호랑이 빵집 1》·《이상한 무인 라면가게》·《읽으면서 바로 써먹는 어린이 고사성어/퀴즈/맞춤법 행성/OX 퀴즈/낱말 퍼즐》)의
+     취향을 따라 새로 고른 30권이에요. 신비한 가게·요괴·도깨비 판타지·유쾌한 추리 20권 + 재미있게 어휘·상식·과학·추리를 키우는 10권.
+     백업의 대출 6권·읽은 30권·추천 17권과도, 예전 시드(대출 이력 36권·대출 중 8권·추천 18권)와도 한 권도 겹치지 않게 골랐어요.
+     seedVersion 4 로 올라갈 때 한 번만 '읽고 싶은 책'에 더하고, 이미 담긴 책·읽은 책·빌린 책은 건너뛰어요.
+     key(wish4:01~wish4:30)는 중복 확인용 표시이고, 저장할 때는 제목으로 견줘요. */
+  var SEED_WISHES_V4 = [
+    { key: 'wish4:01', title: '수상한 편의점', author: '박현숙', tag: '수상한 미스터리' },
+    { key: 'wish4:02', title: '수상한 도서관', author: '박현숙', tag: '수상한 미스터리' },
+    { key: 'wish4:03', title: '수상한 화장실', author: '박현숙', tag: '수상한 미스터리' },
+    { key: 'wish4:04', title: '이상한 무인 아이스크림 가게', author: '서아람 글, 안병현 그림', tag: '신비한 가게' },
+    { key: 'wish4:05', title: '이상한 무인 빵집', author: '서아람 글, 안병현 그림', tag: '신비한 가게' },
+    { key: 'wish4:06', title: '이상한 무인 편의점', author: '서아람 글, 안병현 그림', tag: '신비한 가게' },
+    { key: 'wish4:07', title: '신기한 맛 도깨비 식당. 1', author: '김용세, 김병섭 글, 센개 그림', tag: '도깨비 판타지' },
+    { key: 'wish4:08', title: '미야옹 마음 분식점. 1, 좀비 개가 나타나는 골목', author: '주미 글, 안병현 그림', tag: '고양이 판타지' },
+    { key: 'wish4:09', title: '다판다 편의점. 1, 목소리가 바뀌는 체인지 사탕', author: '강효미 글, 밤코 그림', tag: '유쾌한 판타지' },
+    { key: 'wish4:10', title: '만복이네 떡집', author: '김리리 글, 김이랑 그림', tag: '소원 판타지' },
+    { key: 'wish4:11', title: '여기는 요괴 병원. 2, 요괴가 한을 품으면 저주에 걸린다', author: '도미야스 요코 글, 고마쓰 요시카 그림, 송지현 옮김', tag: '요괴 판타지' },
+    { key: 'wish4:12', title: '여기는 요괴 병원. 3, 시험 점수와 요괴가 상관 있다고?', author: '도미야스 요코 글, 고마쓰 요시카 그림, 송지현 옮김', tag: '요괴 판타지' },
+    { key: 'wish4:13', title: '요괴의 아이를 돌봐드립니다. 2', author: '히로시마 레이코 글, 미노루 그림, 김지영 옮김', tag: '요괴 판타지' },
+    { key: 'wish4:14', title: '요괴 아파트. 1, 지하 12층의 수상한 가족', author: '도미야스 요코 글, 야마무라 고지 그림, 고향옥 옮김', tag: '요괴 판타지' },
+    { key: 'wish4:15', title: '수상한 이웃집 시노다. 1, 똑똑! 옆집 여우인데요', author: '도미야스 요코 글, 오바 켄야 그림, 송지현 옮김', tag: '여우 판타지' },
+    { key: 'wish4:16', title: '도깨비 저택의 상속자', author: '서은혜 글, 정경아 그림', tag: '도깨비 판타지' },
+    { key: 'wish4:17', title: '도깨비 저택과 탈탈귀', author: '서은혜 글, 정경아 그림', tag: '도깨비 판타지' },
+    { key: 'wish4:18', title: '몬스터 캠핑장', author: '정주영 글, 김현민 그림', tag: '몬스터 모험' },
+    { key: 'wish4:19', title: '한밤중 달빛 식당', author: '이분희 글, 윤태규 그림', tag: '달빛 판타지' },
+    { key: 'wish4:20', title: '언제나 다정 죽집', author: '우신영 글, 서영 그림', tag: '따뜻한 판타지' },
+    { key: 'wish4:21', title: '읽으면서 바로 써먹는 어린이 속담', author: '한날 글·그림', tag: '어휘·속담' },
+    { key: 'wish4:22', title: '읽으면서 바로 써먹는 어린이 사자성어', author: '한날 글·그림', tag: '어휘·사자성어' },
+    { key: 'wish4:23', title: '읽으면서 바로 써먹는 어린이 관용구', author: '한날 글·그림', tag: '어휘·관용구' },
+    { key: 'wish4:24', title: '읽으면서 바로 써먹는 어린이 공포의 수학 퍼즐. 1', author: '한날 글·그림', tag: '수학 퍼즐' },
+    { key: 'wish4:25', title: '어린이 과학 형사대 CSI 1 - 박춘삼 교장, CSI를 만들다', author: '고희정 글, 서용남 그림, 곽영직 감수', tag: '과학 추리' },
+    { key: 'wish4:26', title: '수의사 어벤저스 1 - 반려견, 심장을 지켜라!', author: '고희정 글, 이창우 그림, 신윤주 감수', tag: '동물 과학' },
+    { key: 'wish4:27', title: '지금 세계사. 1, 우리가 꼭 알아야 할', author: '최태성 글, 류경은 그림', tag: '세계사 상식' },
+    { key: 'wish4:28', title: '풀꽃선생님의 뻔한 표현 탈출 사전', author: '김수은 글, 신단고 그림', tag: '글쓰기·어휘' },
+    { key: 'wish4:29', title: '어린이 겉과 속이 다른 말 사전', author: '박세랑 글·그림', tag: '관용어 사전' },
+    { key: 'wish4:30', title: '흔한남매의 흔한 호기심. 15, 일상에서 만나는 과학 상식', author: '흔한남매 원작, 안치현 글, 유난희 그림', tag: '과학 상식' }
   ];
 
-  /* 지금 대출 중인 책 8권 (2026-11-18 스크린샷 확인 · 모두 미반납)
+  /* 첫 설치·전체 초기화·'추천 도서 다시 담기'에는 17권 + 30권을 모두 담아요 */
+  var ALL_WISHES = SEED_WISHES.concat(SEED_WISHES_V4);
+
+  /* 송파어린이도서관 · 송파구 책솔이 대출 이력 (2026-07-31 ~ 2026-11-18, 30권)
+     Emma님이 11-18 백업으로 직접 정리한 목록 그대로예요. 별점·한줄평·메모도 함께 담았어요.
+     key 는 등록번호 기준 고유키(직접 산 책은 read4:31)라서 여러 번 병합해도 중복되지 않아요.
+     finishedDate = 반납일(= 다 읽은 날), loanDate = 대출일 */
+  var SEED_READS = [
+    { key: 'loan36:BM0000034887', title: '(수~상한) 호랑이 빵집. 1, 신단 쑥 위조 사건', author: '서지원 글, 홍그림 그림', finishedDate: '2026-11-13', loanDate: '2026-11-10', rating: 5, comment: '', memo: '', source: '도서관', library: '가락몰도서관 (책솔이)' },
+    { key: 'loan36:EM0000126611', title: '이상한 무인 라면가게', author: '서아람 글, 안병현 그림', finishedDate: '2026-11-10', loanDate: '2026-11-04', rating: 5, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:LC0000002506', title: '(읽으면서 바로 써먹는)어린이 고사성어', author: '한날 글·그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', rating: 5, comment: '', memo: '', source: '도서관', library: '풍납도서관 (책솔이)' },
+    { key: 'loan36:EM0000115055', title: '비밀의 신 한피라리. 1, 요괴투성이 여름 방학', author: '히로시마 레이코 지음, 구뵤 아자미 그림, 고향옥 옮김', finishedDate: '2026-11-04', loanDate: '2026-10-23', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000133525', title: '잡아라! 짜증도치', author: '함지슬 글, 임미란 그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000133532', title: '참견백단 야옹이의 슬기로운 걱정 사전', author: '김선희 지음, 강혜숙 그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:SC0000010977', title: '(읽으면서 바로 써먹는)어린이 퀴즈', author: '한날 글·그림', finishedDate: '2026-11-04', loanDate: '2026-10-23', rating: 5, comment: '', memo: '', source: '도서관', library: '돌마리도서관 (책솔이)' },
+    { key: 'loan36:SM0000033443', title: '(읽으면서 바로 써먹는)어린이 스도쿠 : 학교 괴담', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-13', rating: 0, comment: '', memo: '', source: '도서관', library: '소나무3호 (책솔이)' },
+    { key: 'loan36:CM0000037680', title: '(읽으면서 바로 써먹는)어린이 한국사 퀴즈. 2', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-13', rating: 0, comment: '', memo: '', source: '도서관', library: '거마도서관 (책솔이)' },
+    { key: 'loan36:SM0000030563', title: '(읽으면서 바로 써먹는)어린이 맞춤법 행성', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-13', rating: 5, comment: '', memo: '', source: '도서관', library: '소나무3호 (책솔이)' },
+    { key: 'loan36:EM0000126050', title: '(읽으면서 바로 써먹는)어린이 OX 퀴즈', author: '한날 지음', finishedDate: '2026-11-04', loanDate: '2026-10-21', rating: 5, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000131451', title: '여기는 요괴 병원. 1, 요괴도 감기에 걸려요!', author: '도미야스 요코 글, 고마쓰 요시카 그림, 송지현 옮김', finishedDate: '2026-10-13', loanDate: '2026-10-07', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000119426', title: '(읽으면서 바로 써먹는)어린이 세계사 퀴즈. 2', author: '한날 지음', finishedDate: '2026-10-21', loanDate: '2026-10-07', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:KM0000045274', title: '(읽으면서 바로 써먹는)어린이 세계 여행', author: '한날 글·그림', finishedDate: '2026-10-07', loanDate: '2026-09-30', rating: 0, comment: '', memo: '', source: '도서관', library: '송파글마루도서관 (책솔이)' },
+    { key: 'loan36:CM0000038794', title: '(읽으면서 바로 써먹는)어린이 세계사 퀴즈. 1', author: '한날 글·그림', finishedDate: '2026-10-07', loanDate: '2026-09-30', rating: 0, comment: '', memo: '', source: '도서관', library: '거마도서관 (책솔이)' },
+    { key: 'loan36:CM0000040560', title: '(읽으면서 바로 써먹는)어린이 감정 표현', author: '한날 글·그림', finishedDate: '2026-10-07', loanDate: '2026-09-30', rating: 0, comment: '', memo: '', source: '도서관', library: '거마도서관 (책솔이)' },
+    { key: 'loan36:EM0000130049', title: '비밀의 신 한피라리. 7, 복고양이의 선물', author: '히로시마 레이코 글, 구뵤 아자미 그림, 송지현 옮김', finishedDate: '2026-10-21', loanDate: '2026-09-30', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000130048', title: '비밀의 신 한피라리. 6, 요괴들의 운동회', author: '히로시마 레이코 글, 구뵤 아자미 그림, 황세정 옮김', finishedDate: '2026-10-21', loanDate: '2026-09-30', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000131472', title: '(읽으면서 바로 써먹는)어린이 낱말 퍼즐', author: '한날 글·그림', finishedDate: '2026-10-21', loanDate: '2026-10-07', rating: 5, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000127967', title: '(읽으면서 바로 써먹는)어린이 초등 교과 어휘', author: '한날 글·그림', finishedDate: '2026-09-30', loanDate: '2026-09-22', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000127966', title: '(읽으면서 바로 써먹는)어린이 속담 따라쓰기, 바이러스편', author: '한날 글·그림', finishedDate: '2026-09-30', loanDate: '2026-09-22', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000120043', title: '이상한 과자 가게 전천당. 19', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-21', loanDate: '2026-08-13', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000129849', title: '요괴의 아이를 돌봐드립니다. 1', author: '히로시마 레이코 글, 미노루 그림, 김지영 옮김', finishedDate: '2026-08-21', loanDate: '2026-08-13', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000122255', title: '이상한 과자 가게 전천당. 20', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-21', loanDate: '2026-08-13', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000101930', title: '슈퍼 거북', author: '유설화 글·그림', finishedDate: '2026-08-13', loanDate: '2026-07-31', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:PM0000017134', title: '홍길동전, 세상을 뒤집다', author: '이영민 글, 김순영 그림', finishedDate: '2026-08-21', loanDate: '2026-07-31', rating: 0, comment: '', memo: '', source: '도서관', library: '소나무2호 (책솔이)' },
+    { key: 'loan36:EM0000131471', title: '이상한 과자 가게 전천당 : 행운의 갈림길. 4', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-13', loanDate: '2026-07-31', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:EM0000128080', title: '이상한 과자 가게 전천당. 13', author: '히로시마 레이코 글, 쟈쟈 그림, 김정화 옮김', finishedDate: '2026-08-13', loanDate: '2026-07-31', rating: 0, comment: '', memo: '', source: '도서관', library: '송파어린이도서관' },
+    { key: 'loan36:KM0000036055', title: '슬픈 노벨상', author: '정화진 글, 박지윤 그림', finishedDate: '2026-08-21', loanDate: '2026-07-31', rating: 0, comment: '', memo: '', source: '도서관', library: '송파글마루도서관 (책솔이)' },
+    { key: 'read4:31', title: '긴긴밤', author: '루리', finishedDate: '2026-11-18', loanDate: '', rating: 0, comment: '', memo: '', source: '구매', library: '' }
+  ];
+
+  /* 지금 대출 중인 책 6권 (2026-11-18 백업 기준 · 모두 미반납)
      key 는 시드 고유키라서 여러 번 병합해도 중복되지 않아요.
      메모는 도서관 화면에 함께 찍힌 표시만 적었어요(예약중 = 연장 불가). */
   var SEED_LOANS = [
     { key: 'loan3:01', title: '(신비한) 호랑이 빵집. 2, 신단 마을의 위기', author: '', library: '가락몰도서관 (책솔이)', loanDate: '2026-11-10', dueDate: '2026-11-24', memo: '' },
     { key: 'loan3:02', title: '(으스스) 호랑이 빵집. 5, 도깨비가 나타났다!', author: '', library: '가락몰도서관 (책솔이)', loanDate: '2026-11-10', dueDate: '2026-11-24', memo: '' },
     { key: 'loan3:03', title: '기묘한 문구점', author: '', library: '송파어린이도서관', loanDate: '2026-11-13', dueDate: '2026-11-27', memo: '' },
-    { key: 'loan3:04', title: '깻잎토피아', author: '', library: '송파어린이도서관', loanDate: '2026-11-04', dueDate: '2026-11-18', memo: '예약중 · 연장 불가' },
     { key: 'loan3:05', title: '꼬마 흡혈귀. 8, 으스스한 낭독회', author: '', library: '송파어린이도서관', loanDate: '2026-11-04', dueDate: '2026-11-18', memo: '' },
-    { key: 'loan3:06', title: '너무 늦은 안녕은 없다', author: '', library: '송파어린이도서관', loanDate: '2026-11-04', dueDate: '2026-11-18', memo: '예약중 · 연장 불가' },
     { key: 'loan3:07', title: '(읽으면서 바로 써먹는)어린이 수수께끼 : 공포 특급', author: '', library: '송파어린이도서관', loanDate: '2026-11-10', dueDate: '2026-11-24', memo: '' },
     { key: 'loan3:08', title: '(읽으면서 바로 써먹는)어린이 보물섬. 1, 사회·지리편', author: '', library: '송파어린이도서관', loanDate: '2026-11-04', dueDate: '2026-11-18', memo: '예약중 · 연장 불가' }
   ];
@@ -712,6 +746,7 @@
   }
 
   function seedReadRecord(s) {
+    var rating = Number(s.rating);
     return {
       id: uid('r'),
       seedKey: s.key,
@@ -719,10 +754,10 @@
       author: s.author,
       finishedDate: s.finishedDate,
       loanDate: s.loanDate,
-      rating: 0,
-      comment: '',
-      memo: '',
-      source: '도서관',
+      rating: (rating >= 1 && rating <= 5) ? Math.round(rating) : 0,
+      comment: s.comment || '',
+      memo: s.memo || '',
+      source: (s.source === '구매') ? '구매' : '도서관',
       library: s.library,
       createdAt: '2026-11-18T00:00:00.000Z'
     };
@@ -756,8 +791,8 @@
 
   function seedState() {
     var wishes = [];
-    for (var i = 0; i < SEED_WISHES.length; i++) {
-      var s = SEED_WISHES[i];
+    for (var i = 0; i < ALL_WISHES.length; i++) {
+      var s = ALL_WISHES[i];
       wishes.push({
         id: uid('w'),
         title: s.title,
@@ -871,7 +906,7 @@
     return out;
   }
 
-  /* ---------- 저장소에 남아 있는 예전 데이터 + 대출 이력 36권 + 대출 중 8권 병합 ---------- */
+  /* ---------- 저장소에 남아 있는 예전 데이터 + 대출 이력·대출 중·추천 30권 병합 ---------- */
   var lastMigration = null;
 
   function titleKey(title) {
@@ -916,7 +951,7 @@
       addedReads++;
     }
 
-    /* 대출 중인 8권도 시드 키와 제목으로 중복을 걸러 내며 합쳐요
+    /* 대출 중인 책도 시드 키와 제목으로 중복을 걸러 내며 합쳐요
        (이미 다 읽어서 읽은 목록에 있는 책은 빌린 책으로 되살리지 않아요) */
     var readLoose = {};
     for (i = 0; i < s.reads.length; i++) { readLoose[titleLoose(s.reads[i].title)] = true; }
@@ -953,9 +988,37 @@
     }
     s.wishes = kept;
 
+    /* seedVersion 4: 별점 5점 취향으로 고른 30권을 한 번만 더해요 (지웠다면 되살리지 않아요) */
+    var addedWishes = 0;
+    if (s.seedVersion < 4) {
+      var wishTitles = {};
+      var maxOrder = -1;
+      for (i = 0; i < s.wishes.length; i++) {
+        wishTitles[titleLoose(s.wishes[i].title)] = true;
+        if (typeof s.wishes[i].order === 'number' && s.wishes[i].order > maxOrder) {
+          maxOrder = s.wishes[i].order;
+        }
+      }
+      var nextOrder = maxOrder + 1;
+      for (i = 0; i < SEED_WISHES_V4.length; i++) {
+        var newWish = SEED_WISHES_V4[i];
+        var newKey = titleLoose(newWish.title);
+        if (wishTitles[newKey]) { continue; }
+        if (taken[newKey]) { continue; }
+        s.wishes.push({
+          id: uid('w'), title: newWish.title, author: newWish.author || '', memo: '',
+          tag: newWish.tag || '', statuses: blankStatuses(), checkedAt: {},
+          createdAt: new Date().toISOString(), order: nextOrder
+        });
+        nextOrder++;
+        wishTitles[newKey] = true;
+        addedWishes++;
+      }
+    }
+
     s.seedVersion = SEED_VERSION;
     s.version = DATA_VERSION;
-    lastMigration = { addedReads: addedReads, addedLoans: addedLoans, dropped: dropped };
+    lastMigration = { addedReads: addedReads, addedLoans: addedLoans, addedWishes: addedWishes, dropped: dropped };
     return s;
   }
 
@@ -1842,15 +1905,15 @@
     body += '<div class="info-item"><h4>🧸 송파어린이도서관 (송파구립)</h4><p>서울 송파구 올림픽로 105 (잠실새내역 5번 출구)<br>' +
       '02-418-0303 · 월요일·법정공휴일 휴관<br>09:00~18:00 · 1인 7권, 14일, 연장 1회 7일<br>' +
       '송파구 통합도서관(splib.or.kr)이 열리지 않을 때는 잠시 뒤 다시 시도하거나 <b>제목 복사</b>로 검색해 보세요.</p></div>';
-    body += '<div class="info-item"><h4>📖 대출 중 ' + SEED_LOANS.length + '권</h4><p>2026-11-18 도서관 화면에서 확인한 대출 중 목록이에요. 반납일이 가까운 책부터 보여 주고, 다 읽었으면 <b>반납 · 다 읽었어요</b>를 누르면 읽은 목록으로 옮겨져요. 읽고 싶은 책에서 바로 읽었다면 그 카드의 <b>다 읽었어요</b>를 눌러도 돼요.</p></div>';
-    body += '<div class="info-item"><h4>📗 읽은 목록 ' + SEED_READS.length + '권</h4><p>2026-07-31 ~ 11-13 송파어린이도서관·송파구 책솔이 대출 이력(모두 반납 완료)을 그대로 담았어요.<br>반납일을 다 읽은 날로, 소장도서관을 도서관 이름으로 넣었고 별점·한줄평은 비워 두었어요.</p></div>';
+    body += '<div class="info-item"><h4>📖 대출 중 ' + SEED_LOANS.length + '권</h4><p>2026-11-18 도서관 화면에서 확인해 정리한 대출 중 목록이에요. 반납일이 가까운 책부터 보여 주고, 다 읽었으면 <b>반납 · 다 읽었어요</b>를 누르면 읽은 목록으로 옮겨져요. 읽고 싶은 책에서 바로 읽었다면 그 카드의 <b>다 읽었어요</b>를 눌러도 돼요.</p></div>';
+    body += '<div class="info-item"><h4>📗 읽은 목록 ' + SEED_READS.length + '권</h4><p>2026-07-31 ~ 11-18 송파어린이도서관·송파구 책솔이 대출 이력과 직접 남긴 별점·메모를 그대로 담았어요. 별점 5점을 준 책 7권을 기준으로 새 추천 30권을 골랐어요.</p></div>';
     body += '</div>';
 
     body += '<div class="setting-row"><div class="txt"><strong>데이터 백업 (JSON)</strong><span>대출·읽은 목록·읽고 싶은 책 전체</span></div>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-act="export">내보내기</button></div>';
     body += '<div class="setting-row"><div class="txt"><strong>백업 복원 (JSON)</strong><span>내보낸 파일이나 붙여넣은 내용으로 되돌리기</span></div>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-act="import-open">가져오기</button></div>';
-    body += '<div class="setting-row"><div class="txt"><strong>추천 도서 ' + SEED_WISHES.length + '권 다시 담기</strong><span>지운 추천 목록을 처음 상태로</span></div>' +
+    body += '<div class="setting-row"><div class="txt"><strong>추천 도서 ' + ALL_WISHES.length + '권 다시 담기</strong><span>지운 추천 목록을 처음 상태로</span></div>' +
       '<button class="btn btn-ghost btn-sm" type="button" data-act="restore-seed">복원</button></div>';
     body += '<div class="setting-row"><div class="txt"><strong>전체 초기화</strong><span>모든 기록을 지우고 처음부터</span></div>' +
       '<button class="btn btn-danger btn-sm" type="button" data-act="reset-all">초기화</button></div>';
@@ -1939,11 +2002,13 @@
         state = next;
         var mergedReads = 0;
         var mergedLoans = 0;
+        var mergedWishes = 0;
         if (state.seedVersion < SEED_VERSION) {
           lastMigration = null;
           migrateSeed(state);
           mergedReads = lastMigration ? lastMigration.addedReads : 0;
           mergedLoans = lastMigration ? lastMigration.addedLoans : 0;
+          mergedWishes = lastMigration ? lastMigration.addedWishes : 0;
         }
         saveState();
         closeSheet();
@@ -1952,6 +2017,7 @@
         var mergedBits = [];
         if (mergedLoans > 0) { mergedBits.push('대출 중 ' + mergedLoans + '권'); }
         if (mergedReads > 0) { mergedBits.push('읽은 이력 ' + mergedReads + '권'); }
+        if (mergedWishes > 0) { mergedBits.push('추천 ' + mergedWishes + '권'); }
         toast(mergedBits.length > 0
           ? '백업을 불러왔어요 · ' + mergedBits.join(' · ') + '도 담았어요'
           : '백업을 불러왔어요');
@@ -2231,7 +2297,7 @@
       case 'restore-seed':
         openConfirm({
           title: '추천 도서를 다시 담을까요?',
-          message: '추천받은 ' + SEED_WISHES.length + '권을 읽고 싶은 책에 다시 넣어요. 이미 담겨 있거나 이미 빌린 책·읽은 책은 빼고 넣어요.',
+          message: '추천받은 ' + ALL_WISHES.length + '권을 읽고 싶은 책에 다시 넣어요. 이미 담겨 있거나 이미 빌린 책·읽은 책은 빼고 넣어요.',
           confirmLabel: '다시 담기',
           onConfirm: function () {
             var existing = {};
@@ -2240,8 +2306,8 @@
             for (var m = 0; m < state.loans.length; m++) { existing[titleLoose(state.loans[m].title)] = true; }
             var added = 0;
             var baseOrder = state.wishes.length;
-            for (var j = 0; j < SEED_WISHES.length; j++) {
-              var s = SEED_WISHES[j];
+            for (var j = 0; j < ALL_WISHES.length; j++) {
+              var s = ALL_WISHES[j];
               if (existing[titleLoose(s.title)]) { continue; }
               state.wishes.push({
                 id: uid('w'), title: s.title, author: s.author || '', memo: '',
@@ -2260,7 +2326,7 @@
       case 'reset-all':
         openConfirm({
           title: '전체 초기화할까요?',
-          message: '대출·읽은 목록·읽고 싶은 책 기록이 모두 지워지고, 대출 중 ' + SEED_LOANS.length + '권 · 도서관 대출 이력 ' + SEED_READS.length + '권 · 추천 도서 ' + SEED_WISHES.length + '권만 남아요.',
+          message: '대출·읽은 목록·읽고 싶은 책 기록이 모두 지워지고, 대출 중 ' + SEED_LOANS.length + '권 · 도서관 대출 이력 ' + SEED_READS.length + '권 · 추천 도서 ' + ALL_WISHES.length + '권만 남아요.',
           detail: '지우기 전에 "데이터 백업"으로 내보내 두면 되살릴 수 있어요.',
           confirmLabel: '모두 지우기',
           danger: true,
@@ -2358,10 +2424,11 @@
     bindStatic();
     renderAll();
     setTab('loans');
-    if (lastMigration && (lastMigration.addedReads > 0 || lastMigration.addedLoans > 0)) {
+    if (lastMigration && (lastMigration.addedReads > 0 || lastMigration.addedLoans > 0 || lastMigration.addedWishes > 0)) {
       var addedBits = [];
       if (lastMigration.addedLoans > 0) { addedBits.push('대출 중 ' + lastMigration.addedLoans + '권'); }
       if (lastMigration.addedReads > 0) { addedBits.push('읽은 이력 ' + lastMigration.addedReads + '권'); }
+      if (lastMigration.addedWishes > 0) { addedBits.push('추천 ' + lastMigration.addedWishes + '권'); }
       var addedText = addedBits.join(' · ');
       window.setTimeout(function () {
         toast('도서관 기록을 새로 담았어요 · ' + addedText);
